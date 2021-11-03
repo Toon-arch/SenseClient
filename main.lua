@@ -5,6 +5,9 @@ spawn(function()
 		if not isfolder("sense-client") then
 			makefolder("sense-client")
 		end
+		if not isfolder("sense-client/custom") then
+			makefolder("sense-client/custom")
+		end
 	end
 end)
 
@@ -28,6 +31,8 @@ local _ParentClientInterface = function(Gui)
 		Gui.Parent = CoreGui
 	end
 end
+
+local savefilesettingsname = tostring(game.PlaceId)
 
 --// API References
 local GUIData = (function()
@@ -72,7 +77,7 @@ local GUIData = (function()
 	-- Save Functions
 	local UpdateClientSettings = function()
 		local JSONData = HttpService:JSONEncode(saveData)
-		local JSONName = ("sense-client/" .. tostring(game.PlaceId) .. ".JSON")
+		local JSONName = ("sense-client/" .. tostring(savefilesettingsname) .. ".JSON")
 		writefile(JSONName, JSONData)
 	end
 	
@@ -1967,6 +1972,18 @@ local _Aimbot = (function()
 	return module
 	
 end)()
+local Keys = {}
+game:GetService("UserInputService").InputBegan:Connect(function(inp, processed)
+	if processed then return end
+	local KeyCode = tostring(inp.KeyCode):split(".")[3]
+	Keys[KeyCode] = true
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(inp, processed)
+	if processed then return end
+	local KeyCode = tostring(inp.KeyCode):split(".")[3]
+	if Keys[KeyCode] then Keys[KeyCode] = false end
+end)
+local flyKeyCheck = nil
 local _Flight = (function()
 	--// Variables
 	local RunService = game:GetService("RunService")
@@ -2000,8 +2017,9 @@ local _Flight = (function()
 	
 	local function flyEnd()
 		lib.disconnect("fly")
-		if flyPart then
-			--flyPart:Destroy()
+		if flyKeyCheck ~= nil then
+			flyKeyCheck:Disconnect()
+			flyKeyCheck = nil
 		end
 		character:FindFirstChildWhichIsA("Humanoid").PlatformStand = false
 		if character and character.Parent and flyPart then
@@ -2063,44 +2081,51 @@ local _Flight = (function()
 			primaryPart.CFrame = flyPart.CFrame
 			humanoid.PlatformStand = true
 		end))
-		lib.connect("fly", UserInputService.InputBegan:Connect(function(input, event)
-			if event then return end
-			local code, codes = input.KeyCode, Enum.KeyCode
-			if code == codes.W then
+		flyKeyCheck = game:GetService("RunService").RenderStepped:Connect(function()
+			if Keys["W"] then
 				dir.w = true
-			elseif code == codes.A then
+			end
+			if Keys["A"] then
 				dir.a = true
-			elseif code == codes.S then
+			end
+			if Keys["S"] then
 				dir.s = true
-			elseif code == codes.D then
+			end
+			if Keys["D"] then
 				dir.d = true
-			elseif code == codes.Q then
+			end
+			if Keys["Q"] then
 				dir.q = true
-			elseif code == codes.E then
+			end
+			if Keys["E"] then
 				dir.e = true
-			elseif code == codes.Space then
+			end
+			if Keys["Space"] then
 				dir.q = true
 			end
-		end))
-		lib.connect("fly", UserInputService.InputEnded:Connect(function(input, event)
-			if event then return end
-			local code, codes = input.KeyCode, Enum.KeyCode
-			if code == codes.W then
+			if not Keys["W"] then
 				dir.w = false
-			elseif code == codes.A then
+			end
+			if not Keys["A"] then
 				dir.a = false
-			elseif code == codes.S then
+			end
+			if not Keys["S"] then
 				dir.s = false
-			elseif code == codes.D then
+			end
+			if not Keys["D"] then
 				dir.d = false
-			elseif code == codes.Q then
-				dir.q = false
-			elseif code == codes.E then
-				dir.e = false
-			elseif code == codes.Space then
+			end
+			if not Keys["Q"] then
 				dir.q = false
 			end
-		end))
+			if not Keys["E"] then
+				dir.e = false
+			end
+			if not Keys["Space"] then
+				dir.q = false
+			end
+			wait()
+		end)
 	end
 	
 	--// Events
@@ -2486,7 +2511,7 @@ local backcolor = Color3.new()
 --// Saving
 local readfile = readfile or function() end
 pcall(function()
-	local JSONName = ("sense-client/" .. tostring(game.PlaceId) .. ".JSON")
+	local JSONName = ("sense-client/" .. savefilesettingsname .. ".JSON")
 	local JSONData = readfile(JSONName)
 	if JSONData then
 		local LUAData = HttpService:JSONDecode(JSONData)
@@ -3117,3 +3142,20 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 end)
+
+return {
+	["watermark"] = function(t)
+		_DefaultWatermark = tostring(t) or "Sense Client"
+	end,
+	["savefile"] = function(t)
+		savefilesettingsname = tostring(t) or tostring(game.PlaceId)
+	end,
+	["screenGui"] = screenGui,
+	["gui"] = gui,
+	["Tabs"] = {
+		["Render"] = Render,
+		["Combat"] = Combat,
+		["Movement"] = Movement,
+		["Player"] = PlayerTab
+	}
+}
