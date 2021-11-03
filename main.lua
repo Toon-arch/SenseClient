@@ -32,7 +32,8 @@ local _ParentClientInterface = function(Gui)
 	end
 end
 
-local savefilesettingsname = tostring(game.PlaceId)
+local reqenv = function() return (getgenv() or _G) end
+local savefilesettingsname = reqenv()["sc_save"] or tostring(game.PlaceId)
 
 --// API References
 local GUIData = (function()
