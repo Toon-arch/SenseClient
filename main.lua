@@ -34,6 +34,11 @@ end
 
 local reqenv = function() return (getgenv() or _G) end
 local savefilesettingsname = reqenv()["sc_save"] or tostring(game.PlaceId)
+local PanicRunning = false
+local UpdateClientSettings = nil
+local GuiRender = nil
+local OnGameCloseFunc = nil
+local OnTeleportFunc = nil
 
 --// API References
 local GUIData = (function()
@@ -76,9 +81,9 @@ local GUIData = (function()
 	local gui = {}
 	
 	-- Save Functions
-	local UpdateClientSettings = function()
+	UpdateClientSettings = function(savesname)
 		local JSONData = HttpService:JSONEncode(saveData)
-		local JSONName = ("sense-client/" .. tostring(savefilesettingsname) .. ".JSON")
+		local JSONName = ("sense-client/" .. tostring(savesname) .. ".JSON")
 		writefile(JSONName, JSONData)
 	end
 	
@@ -501,10 +506,10 @@ local GUIData = (function()
 			hintKey = math.random()
 			currentHint = hintKey
 			
-			-- wait(2)
 			wait(0.5)
 			
 			if currentHint == hintKey then
+				if PanicRunning == true then return end
 				gui:setText(screenGui.Hint, " " .. hintText .. " ")
 				local textSize = gui:textSize(screenGui.Hint, Vector2.new(2500, 500))
 				screenGui.Hint.Position = UDim2.new(0, Mouse.X, 0, Mouse.Y + 4)
@@ -519,6 +524,7 @@ local GUIData = (function()
 		
 		Mouse.Move:Connect(function()
 			if currentHint == hintKey then
+				if PanicRunning == true then return end
 				screenGui.Hint.Visible = false
 			end
 		end)
@@ -656,7 +662,6 @@ local GUIData = (function()
 		
 		guiObject.Indicator.MouseButton1Down:Connect(newValue)
 		guiObject.Label.MouseButton1Down:Connect(newValue)
-		newValue(true)
 		
 		guiData.ySize = 0
 		guiData.Open = false
@@ -965,7 +970,16 @@ local GUIData = (function()
 	
 	Mods.Text = _DefaultWatermark
 	
-	game.Close:Connect(function() UpdateClientSettings() end)
+	OnGameCloseFunc = game.Close:Connect(function()
+		if PanicRunning == true then return end
+		UpdateClientSettings(savefilesettingsname)
+	end)
+	OnTeleportFunc = Player.OnTeleport:Connect(function(State)
+		if State == Enum.TeleportState.Started then
+			if PanicRunning == true then return end
+			UpdateClientSettings(savefilesettingsname)
+		end
+	end)
 	
 	return {gui, saveData, screenGui}
 end)()
@@ -2492,6 +2506,30 @@ local _Noclip = (function()
 	return module
 	
 end)()
+local _SelfDestruct = function()
+	UpdateClientSettings(savefilesettingsname)
+	PanicRunning = true
+	wait(0.1)
+	_ESP.Options.Enabled = false
+	_ESP:Disable()
+	_ESP2D:Disable()
+	_Chams.Options.Enabled = false
+	_Chams:Disable()
+	_Tracers.Options.Enabled = false
+	_Tracers:Disable()
+	_Freecam.flyStart(false)
+	_Aimbot.Options.Enabled = false
+	_Flight.flyStart(false)
+	_Rubberbanding.Toggle(false)
+	_AntiTP.Toggle(false)
+	if OnGameCloseFunc ~= nil then OnGameCloseFunc:Disconnect() end
+	OnGameCloseFunc = nil
+	if OnTeleportFunc ~= nil then OnTeleportFunc:Disconnect() end
+	OnTeleportFunc = nil
+	if GuiRender ~= nil then GuiRender:Disconnect() end
+	GuiRender = nil
+	GUIData[3]:Destroy()
+end
 
 --// Variables
 local RunService = game:GetService("RunService")
@@ -2527,6 +2565,13 @@ end)
 local Render = gui:create("Container", {
 	Name = "Render",
 })--|
+	local PanicEmergency = Render.self:create("Execute", {
+		Name = "Panic",
+		Hint = "Completely uninject Sense",
+		Callback = function()
+			_SelfDestruct()
+		end,
+	})--|
 	local OpenGui = Render.self:create("Toggle", {
 		Name = "OpenGui",
 		Default = true,
@@ -3125,7 +3170,8 @@ local PlayerTab = gui:create("Container", {
 		})
 
 --// UI Functionality
-RunService.RenderStepped:Connect(function()
+GuiRender = RunService.RenderStepped:Connect(function()
+	if PanicRunning == true then return end
 	spawn(function()
 		if _guiWatermark then
 			screenGui.Mods.Text = _DefaultWatermark
@@ -3145,14 +3191,11 @@ RunService.RenderStepped:Connect(function()
 end)
 
 return {
-	["watermark"] = function(t)
-		_DefaultWatermark = tostring(t) or "Sense Client"
-	end,
-	["savefile"] = function(t)
-		savefilesettingsname = tostring(t) or tostring(game.PlaceId)
-	end,
 	["screenGui"] = screenGui,
 	["gui"] = gui,
+	["watermark"] = function(t) _DefaultWatermark = tostring(t) or "Sense Client" end,
+	["savefile"] = function(t) savefilesettingsname = tostring(t) or tostring(game.PlaceId) end,
+	["update"] = function() UpdateClientSettings(savefilesettingsname) end,
 	["Tabs"] = {
 		["Render"] = Render,
 		["Combat"] = Combat,
