@@ -1339,6 +1339,7 @@ local _ESP2D = (function()
 		
 		local function Scan(item, parent)
 			local obj = Instance.new(item.Type)
+			_ProtectionService.ProtectInstance(obj)
 			if (item.ID) then
 				local awaiting = awaitRef[item.ID]
 				if (awaiting) then
