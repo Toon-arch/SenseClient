@@ -33,7 +33,7 @@ local _ParentClientInterface = function(Gui)
 end
 
 local reqenv = function() return (getgenv() or _G) end
-local savefilesettingsname = reqenv()["sc_save"] or tostring(game.PlaceId)
+local SettingsName = tostring(game.PlaceId)
 local PanicRunning = false
 local UpdateClientSettings = nil
 local GuiRender = nil
@@ -972,12 +972,12 @@ local GUIData = (function()
 	
 	OnGameCloseFunc = game.Close:Connect(function()
 		if PanicRunning == true then return end
-		UpdateClientSettings(savefilesettingsname)
+		UpdateClientSettings(SettingsName)
 	end)
 	OnTeleportFunc = Player.OnTeleport:Connect(function(State)
 		if State == Enum.TeleportState.Started then
 			if PanicRunning == true then return end
-			UpdateClientSettings(savefilesettingsname)
+			UpdateClientSettings(SettingsName)
 		end
 	end)
 	
@@ -985,6 +985,7 @@ local GUIData = (function()
 end)()
 
 local _guiWatermark = true
+local _guiRemoveMods = false
 
 local _ESP = (function()
 	--// Variables
@@ -2508,7 +2509,7 @@ local _Noclip = (function()
 	
 end)()
 local _SelfDestruct = function()
-	UpdateClientSettings(savefilesettingsname)
+	UpdateClientSettings(SettingsName)
 	PanicRunning = true
 	wait(0.1)
 	_ESP.Options.Enabled = false
@@ -2551,7 +2552,7 @@ local backcolor = Color3.new()
 --// Saving
 local readfile = readfile or function() end
 pcall(function()
-	local JSONName = ("sense-client/" .. savefilesettingsname .. ".JSON")
+	local JSONName = ("sense-client/" .. SettingsName .. ".JSON")
 	local JSONData = readfile(JSONName)
 	if JSONData then
 		local LUAData = HttpService:JSONDecode(JSONData)
@@ -2588,12 +2589,20 @@ local Render = gui:create("Container", {
 			screenGui.Hint.Visible = false
 		end,
 	})--|
-		local SpoofCol = OpenGui.self:create("Checkbox", {
+		local isWatermark = OpenGui.self:create("Checkbox", {
 			Name = "Watermark",
 			Default = true,
 			Hint = "If the watermark is visible",
-			Callback = function(value)
-				_guiWatermark = value
+			Callback = function(enabled)
+				_guiWatermark = enabled
+			end,
+		})
+		local isModlist = OpenGui.self:create("Checkbox", {
+			Name = "Remove Mods",
+			Default = false,
+			Hint = "If the mod list is visible (also removes watermark)",
+			Callback = function(enabled)
+				_guiRemoveMods = enabled
 			end,
 		})
 		local Opacity = OpenGui.self:create("Number", {
@@ -3165,8 +3174,8 @@ local PlayerTab = gui:create("Container", {
 			Name = "Spoof Collision",
 			Default = true,
 			Hint = "If CanCollide is spoofed",
-			Callback = function(value)
-				_SpoofCollison = value
+			Callback = function(enabled)
+				_SpoofCollison = enabled
 			end,
 		})
 
@@ -3178,6 +3187,11 @@ GuiRender = RunService.RenderStepped:Connect(function()
 			screenGui.Mods.Text = _DefaultWatermark
 		else
 			screenGui.Mods.Text = ""
+		end
+		if _guiRemoveMods then
+			screenGui.Mods.Visible = false
+		else
+			screenGui.Mods.Visible = true
 		end
 	end)
 	for _, frame in pairs(screenGui:GetChildren()) do
@@ -3195,12 +3209,7 @@ return {
 	["screenGui"] = screenGui,
 	["gui"] = gui,
 	["watermark"] = function(t) _DefaultWatermark = tostring(t) or "Sense Client" end,
-	["savefile"] = function(t) savefilesettingsname = tostring(t) or tostring(game.PlaceId) end,
-	["update"] = function() UpdateClientSettings(savefilesettingsname) end,
-	["Tabs"] = {
-		["Render"] = Render,
-		["Combat"] = Combat,
-		["Movement"] = Movement,
-		["Player"] = PlayerTab
-	}
+	["savefile"] = function(t) SettingsName = tostring(t) or tostring(game.PlaceId) end,
+	["update"] = function() UpdateClientSettings(SettingsName) end,
+	["Tabs"] = {["Render"] = Render, ["Combat"] = Combat, ["Movement"] = Movement, ["Player"] = PlayerTab}
 }
