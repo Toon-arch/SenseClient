@@ -506,8 +506,6 @@ local GUIData = (function()
 			hintKey = math.random()
 			currentHint = hintKey
 			
-			wait(0.5)
-			
 			if currentHint == hintKey then
 				if PanicRunning == true then return end
 				gui:setText(screenGui.Hint, " " .. hintText .. " ")
@@ -520,12 +518,15 @@ local GUIData = (function()
 		
 		guiObject.MouseLeave:Connect(function()
 			hintKey = math.random()
+			if PanicRunning == true then return end
+			screenGui.Hint.Visible = false
 		end)
 		
-		Mouse.Move:Connect(function()
+		guiObject.MouseMoved:Connect(function()
 			if currentHint == hintKey then
 				if PanicRunning == true then return end
-				screenGui.Hint.Visible = false
+				screenGui.Hint.Visible = true
+				screenGui.Hint.Position = UDim2.new(0, Mouse.X, 0, Mouse.Y + 4)
 			end
 		end)
 	end
