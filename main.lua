@@ -985,6 +985,13 @@ local GUIData = (function()
 	return {gui, saveData, screenGui}
 end)()
 
+spawn(function()
+	while wait(10) do
+		if PanicRunning == true then return end
+		UpdateClientSettings(SettingsName)
+	end
+end)
+
 local _guiWatermark = true
 local _guiRemoveMods = false
 
